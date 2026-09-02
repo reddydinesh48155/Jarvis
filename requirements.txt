@@ -1,0 +1,8 @@
+
+# JARVIS project dependencies
+PyAudio
+PyAutoGUI
+requests
+sounddevice
+SpeechRecognition
+pyttsx3
