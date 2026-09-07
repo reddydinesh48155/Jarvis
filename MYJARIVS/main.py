@@ -19,9 +19,7 @@ from ai_brain import ask_ai
 MICROPHONE_INDEX = 1
 WAKE_WORDS = ["jarvis", "hey jarvis"]
 
-# These are the existing non-AI commands that may be used directly. Keeping
-# this list separate from the AI fallback prevents arbitrary speech from
-# being sent to an action handler without a wake word.
+# These are the existing non-AI commands that may be used directly.
 DIRECT_COMMANDS = {
     "hello",
     "hi",
@@ -177,7 +175,6 @@ def speak(text):
         return
 
     print("JARVIS:", text)
-    
 
     try:
         engine = pyttsx3.init()
@@ -249,13 +246,11 @@ def listen():
     except sr.RequestError:
 
         speak("Sorry sir, speech recognition is unavailable.")
-
         return ""
 
     except Exception as e:
 
         speak(f"Microphone error: {e}")
-
         return ""
 
 
@@ -265,10 +260,7 @@ def listen():
 
 def open_google():
 
-    webbrowser.open(
-        "https://www.google.com"
-    )
-
+    webbrowser.open("https://www.google.com")
     speak("Opening Google, sir.")
 
 
@@ -278,10 +270,7 @@ def open_google():
 
 def open_youtube():
 
-    webbrowser.open(
-        "https://www.youtube.com"
-    )
-
+    webbrowser.open("https://www.youtube.com")
     speak("Opening YouTube, sir.")
 
 
@@ -291,10 +280,7 @@ def open_youtube():
 
 def open_github():
 
-    webbrowser.open(
-        "https://github.com"
-    )
-
+    webbrowser.open("https://github.com")
     speak("Opening GitHub, sir.")
 
 
@@ -356,8 +342,6 @@ def _focus_chatgpt_input(window):
         window_width = int(window.width)
         window_height = int(window.height)
 
-        # The composer is at the bottom-center of the ChatGPT page. Using
-        # the current window bounds avoids fixed desktop coordinates.
         input_x = window_left + window_width // 2
         input_y = window_top + int(window_height * 0.88)
         pyautogui.click(input_x, input_y)
@@ -387,9 +371,7 @@ def open_chatgpt_and_send(command):
         return
 
     try:
-        opened = webbrowser.open(
-            "https://chatgpt.com/"
-        )
+        opened = webbrowser.open("https://chatgpt.com/")
 
         if opened is False:
             speak(failure_message)
@@ -417,22 +399,17 @@ def open_chatgpt_and_send(command):
             speak(failure_message)
             return
 
-        speak(
-            "Opening ChatGPT and sending your message, sir."
-        )
+        speak("Opening ChatGPT and sending your message, sir.")
 
     except Exception as error:
-        print("ChatGPT error:", error)
+        speak(f"ChatGPT error: {error}")
         speak(failure_message)
 
 
 def open_chatgpt():
 
-    webbrowser.open(
-        "https://chatgpt.com/"
-    )
-
     speak("Opening ChatGPT, sir.")
+    webbrowser.open("https://chatgpt.com/")
 
 
 # ============================================================
@@ -452,7 +429,7 @@ def open_chrome():
 
     except Exception as e:
 
-        print("Chrome error:", e)
+        speak(f"Chrome error: {e}")
         speak("Sorry sir, I couldn't open Chrome.")
 
 
@@ -462,10 +439,7 @@ def open_chrome():
 
 def open_notepad():
 
-    subprocess.Popen(
-        "notepad.exe"
-    )
-
+    subprocess.Popen("notepad.exe")
     speak("Opening Notepad, sir.")
 
 
@@ -475,10 +449,7 @@ def open_notepad():
 
 def open_calculator():
 
-    subprocess.Popen(
-        "calc.exe"
-    )
-
+    subprocess.Popen("calc.exe")
     speak("Opening Calculator, sir.")
 
 
@@ -488,10 +459,7 @@ def open_calculator():
 
 def open_file_explorer():
 
-    subprocess.Popen(
-        "explorer.exe"
-    )
-
+    subprocess.Popen("explorer.exe")
     speak("Opening File Explorer, sir.")
 
 
@@ -512,7 +480,7 @@ def open_vs_code():
 
     except Exception as e:
 
-        print("VS Code error:", e)
+        speak(f"VS Code error: {e}")
         speak("Sorry sir, I couldn't open VS Code.")
 
 
@@ -533,7 +501,7 @@ def open_whatsapp():
 
     except Exception as e:
 
-        print("WhatsApp error:", e)
+        speak(f"WhatsApp error: {e}")
         speak("Sorry sir, I couldn't open WhatsApp.")
 
 
@@ -555,7 +523,7 @@ def open_downloads():
 
     except Exception as e:
 
-        print("Downloads error:", e)
+        speak(f"Downloads error: {e}")
         speak("Sorry sir, I couldn't open the Downloads folder.")
 
 
@@ -564,6 +532,7 @@ def open_downloads():
 # ============================================================
 
 def open_desktop():
+
     try:
         desktop = os.path.join(os.path.expanduser("~"), "Desktop")
 
@@ -581,7 +550,7 @@ def open_desktop():
             speak("Sorry sir, I couldn't find the Desktop folder.")
 
     except Exception as e:
-        print("Desktop error:", e)
+        speak(f"Desktop error: {e}")
         speak("Sorry sir, I couldn't open Desktop.")
 
 
@@ -591,10 +560,7 @@ def open_desktop():
 
 def play_music():
 
-    webbrowser.open(
-        "https://music.youtube.com"
-    )
-
+    webbrowser.open("https://music.youtube.com")
     speak("Opening YouTube Music, sir.")
 
 
@@ -618,10 +584,7 @@ def youtube_search(command):
 
     if not query:
 
-        speak(
-            "What should I search for?"
-        )
-
+        speak("What should I search for?")
         return
 
     url = (
@@ -631,9 +594,7 @@ def youtube_search(command):
 
     webbrowser.open(url)
 
-    speak(
-        f"Searching YouTube for {query}, sir."
-    )
+    speak(f"Searching YouTube for {query}, sir.")
 
 
 # ============================================================
@@ -661,10 +622,7 @@ def google_search(command):
 
     if not query:
 
-        speak(
-            "What should I search for?"
-        )
-
+        speak("What should I search for?")
         return
 
     url = (
@@ -674,9 +632,7 @@ def google_search(command):
 
     webbrowser.open(url)
 
-    speak(
-        f"Searching Google for {query}, sir."
-    )
+    speak(f"Searching Google for {query}, sir.")
 
 
 # ============================================================
@@ -689,9 +645,7 @@ def tell_time():
         "%I:%M %p"
     )
 
-    speak(
-        f"The time is {current_time}, sir."
-    )
+    speak(f"The time is {current_time}, sir.")
 
 
 # ============================================================
@@ -704,9 +658,7 @@ def tell_date():
         "%d %B %Y"
     )
 
-    speak(
-        f"Today's date is {current_date}, sir."
-    )
+    speak(f"Today's date is {current_date}, sir.")
 
 
 # ============================================================
@@ -720,9 +672,7 @@ def increase_volume():
         presses=3
     )
 
-    speak(
-        "Volume increased, sir."
-    )
+    speak("Volume increased, sir.")
 
 
 # ============================================================
@@ -736,9 +686,7 @@ def decrease_volume():
         presses=3
     )
 
-    speak(
-        "Volume decreased, sir."
-    )
+    speak("Volume decreased, sir.")
 
 
 # ============================================================
@@ -747,13 +695,9 @@ def decrease_volume():
 
 def mute_volume():
 
-    pyautogui.press(
-        "volumemute"
-    )
+    pyautogui.press("volumemute")
 
-    speak(
-        "Volume muted, sir."
-    )
+    speak("Volume muted, sir.")
 
 
 # ============================================================
@@ -767,24 +711,17 @@ def take_screenshot():
         filename = "jarvis_screenshot.png"
 
         screenshot = pyautogui.screenshot()
-
         screenshot.save(filename)
 
-        full_path = os.path.abspath(
-            filename
-        )
+        full_path = os.path.abspath(filename)
 
-        print("Screenshot saved as:", full_path)
-
-        speak("Taking a screenshot, sir.")
+        speak(f"Screenshot saved as {full_path}")
+        speak("Screenshot taken, sir.")
 
     except Exception as e:
 
-        print("Screenshot error:", e)
-
-        speak(
-            "Sorry sir, I couldn't take the screenshot."
-        )
+        speak(f"Screenshot error: {e}")
+        speak("Sorry sir, I couldn't take the screenshot.")
 
 
 # ============================================================
@@ -793,9 +730,7 @@ def take_screenshot():
 
 def greeting():
 
-    speak(
-        "Hello sir. How can I help you?"
-    )
+    speak("Hello sir. How can I help you?")
 
 
 # ============================================================
@@ -838,10 +773,7 @@ def process_command(command):
 
     if not command:
 
-        speak(
-            "Yes sir. How can I help you?"
-        )
-
+        speak("Yes sir. How can I help you?")
         return True
 
 
@@ -864,9 +796,7 @@ def process_command(command):
 
     elif "how are you" in command:
 
-        speak(
-            "I am functioning perfectly, sir."
-        )
+        speak("I am functioning perfectly, sir.")
 
 
     # --------------------------------------------------------
@@ -906,7 +836,7 @@ def process_command(command):
 
 
     # --------------------------------------------------------
-    # CHATGPT
+    # CHATGPT — with message
     # --------------------------------------------------------
 
     elif (
@@ -920,6 +850,10 @@ def process_command(command):
 
         open_chatgpt_and_send(command)
 
+
+    # --------------------------------------------------------
+    # CHATGPT — simple open
+    # --------------------------------------------------------
 
     elif (
         "open chatgpt" in command
@@ -1136,10 +1070,7 @@ def process_command(command):
         or command == "goodbye"
     ):
 
-        speak(
-            "Shutting down. Goodbye sir."
-        )
-
+        speak("Shutting down. Goodbye sir.")
         return False
 
 
@@ -1151,20 +1082,13 @@ def process_command(command):
 
         try:
 
-            response = ask_ai(
-                command
-            )
-
-            # speak() prints the received AI response and speaks that same text.
+            response = ask_ai(command)
             speak(response)
 
         except Exception as e:
 
-            print("AI error:", e)
-
-            speak(
-                "Sorry sir, I couldn't connect to the AI."
-            )
+            speak(f"AI error: {e}")
+            speak("Sorry sir, I couldn't connect to the AI.")
 
 
     return True
@@ -1178,17 +1102,12 @@ def main():
 
     print()
     print("=" * 60)
-    speak("JARVIS AI")
+    print("                 JARVIS AI")
     print("=" * 60)
     print()
 
-    speak(
-        "System initialized."
-    )
-
-    speak(
-        "Hello sir. JARVIS is ready."
-    )
+    speak("System initialized.")
+    speak("Hello sir. JARVIS is ready.")
 
     while True:
 
@@ -1215,7 +1134,6 @@ def main():
         ):
 
             speak("Wake word not detected.")
-
             continue
 
 
@@ -1223,9 +1141,7 @@ def main():
         # PROCESS
         # ----------------------------------------------------
 
-        keep_running = process_command(
-            command
-        )
+        keep_running = process_command(command)
 
         if not keep_running:
 

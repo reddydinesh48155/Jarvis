@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     livekit_agent_name: str = "nova-voice"
     livekit_token_ttl_seconds: int = Field(default=3600, ge=60, le=86400)
 
+    # Voice pipeline & agent settings (Part 3 & 4)
+    whisper_model_size: str = "base.en"
+    whisper_device: str = "cpu"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.1"
+    piper_voice: str = "en_US-lessac-medium"
+    piper_binary_path: str = "piper"
+    voice_sample_rate: int = 48000
+
     @property
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.frontend_origin.split(",") if origin.strip()]

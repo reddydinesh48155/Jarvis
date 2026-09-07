@@ -8,12 +8,55 @@ import { useAuth } from "@/hooks/use-auth";
 import { getVoiceToken } from "@/lib/api";
 
 type VoiceStatus = "connecting" | "connected" | "disconnected";
+type AgentLifecycleState = "listening" | "thinking" | "speaking";
 
+const EVENT_TOPIC = "nova.voice.events";
 const ACK_TOPIC = "nova.voice.ack";
+
+interface ActiveAgentInfo {
+  name: string;
+  displayName: string;
+  reason?: string;
+}
+
+const AGENT_BADGE_STYLES: Record<string, { bg: string; text: string; border: string; icon: string }> = {
+  main_assistant: {
+    bg: "bg-indigo-50",
+    text: "text-indigo-700",
+    border: "border-indigo-200",
+    icon: "🤖",
+  },
+  research: {
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-200",
+    icon: "🔬",
+  },
+  coding: {
+    bg: "bg-violet-50",
+    text: "text-violet-700",
+    border: "border-violet-200",
+    icon: "💻",
+  },
+  productivity: {
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-200",
+    icon: "⚡",
+  },
+};
 
 export function VoiceWorkspace() {
   const { user, accessToken, isLoading: isAuthLoading } = useAuth();
   const [status, setStatus] = useState<VoiceStatus>("disconnected");
+  const [agentState, setAgentState] = useState<AgentLifecycleState>("listening");
+  const [activeAgent, setActiveAgent] = useState<ActiveAgentInfo>({
+    name: "main_assistant",
+    displayName: "Main Assistant",
+  });
+  const [userTranscript, setUserTranscript] = useState<string | null>(null);
+  const [agentTranscript, setAgentTranscript] = useState<string | null>(null);
+
   const [isMicEnabled, setIsMicEnabled] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
@@ -89,6 +132,7 @@ export function VoiceWorkspace() {
       setIsMicEnabled(false);
       setIsUserSpeaking(false);
       setIsAgentSpeaking(false);
+      setAgentState("listening");
       clearAudioElements();
       if (!intentionalDisconnectRef.current) {
         scheduleReconnect();
@@ -100,8 +144,17 @@ export function VoiceWorkspace() {
       setIsAgentSpeaking(speakers.some((participant) => participant.isAgent));
     });
     room.on(RoomEvent.ParticipantAttributesChanged, (attributes, participant) => {
-      if (participant.isAgent && attributes["lk.agent.state"]) {
-        setIsAgentSpeaking(attributes["lk.agent.state"] === "speaking");
+      if (participant.isAgent) {
+        const stateAttr = attributes["lk.agent.state"] as AgentLifecycleState | undefined;
+        if (stateAttr) {
+          setAgentState(stateAttr);
+          setIsAgentSpeaking(stateAttr === "speaking");
+        }
+        const agentName = attributes["nova.agent.name"];
+        const agentDisplay = attributes["nova.agent.display_name"];
+        if (agentName && agentDisplay) {
+          setActiveAgent({ name: agentName, displayName: agentDisplay });
+        }
       }
     });
     room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
@@ -117,15 +170,54 @@ export function VoiceWorkspace() {
       track.detach().forEach((element) => element.remove());
     });
     room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
-      if (topic !== ACK_TOPIC || !participant?.isAgent) {
+      if (!participant?.isAgent) {
         return;
       }
-      const message = new TextDecoder().decode(payload);
-      setLastAcknowledgement(message);
-      if (acknowledgementTimerRef.current !== null) {
-        clearTimeout(acknowledgementTimerRef.current);
+
+      if (topic === EVENT_TOPIC) {
+        try {
+          const raw = new TextDecoder().decode(payload);
+          const data = JSON.parse(raw);
+
+          if (data.type === "agent_state") {
+            setAgentState(data.state);
+            setIsAgentSpeaking(data.state === "speaking");
+            if (data.agent_display_name) {
+              setActiveAgent({
+                name: data.agent_name || "main_assistant",
+                displayName: data.agent_display_name,
+              });
+            }
+          } else if (data.type === "active_agent") {
+            setActiveAgent({
+              name: data.name,
+              displayName: data.display_name,
+              reason: data.reason,
+            });
+          } else if (data.type === "user_transcript") {
+            setUserTranscript(data.text);
+          } else if (data.type === "agent_transcript") {
+            setAgentTranscript(data.text);
+            if (data.agent_display_name) {
+              setActiveAgent({
+                name: data.agent_name || "main_assistant",
+                displayName: data.agent_display_name,
+              });
+            }
+          } else if (data.type === "error") {
+            setError(data.message || "An error occurred during voice processing.");
+          }
+        } catch {
+          // Ignore invalid JSON payloads
+        }
+      } else if (topic === ACK_TOPIC) {
+        const message = new TextDecoder().decode(payload);
+        setLastAcknowledgement(message);
+        if (acknowledgementTimerRef.current !== null) {
+          clearTimeout(acknowledgementTimerRef.current);
+        }
+        acknowledgementTimerRef.current = setTimeout(() => setLastAcknowledgement(null), 5000);
       }
-      acknowledgementTimerRef.current = setTimeout(() => setLastAcknowledgement(null), 4000);
     });
     room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
       setCanPlayAudio(room.canPlaybackAudio);
@@ -242,46 +334,156 @@ export function VoiceWorkspace() {
   const statusLabel = status === "connected" ? "Connected" : status === "connecting" ? "Connecting" : "Disconnected";
   const statusColor = status === "connected" ? "bg-emerald-500" : status === "connecting" ? "bg-amber-400" : "bg-slate-400";
 
+  const lifecycleLabel =
+    agentState === "thinking"
+      ? "Thinking & Routing..."
+      : agentState === "speaking"
+      ? "Speaking"
+      : "Listening";
+
+  const lifecycleColor =
+    agentState === "thinking"
+      ? "bg-amber-400 animate-pulse"
+      : agentState === "speaking"
+      ? "bg-indigo-500 animate-pulse"
+      : "bg-emerald-500";
+
+  const badgeStyle = AGENT_BADGE_STYLES[activeAgent.name] || AGENT_BADGE_STYLES.main_assistant;
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_#ddd6fe,_transparent_35%),#f8fafc] px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <header className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink font-bold text-white">N</span><span className="font-semibold tracking-tight text-ink">NOVA</span></Link>
-          <Link href="/" className="text-sm font-semibold text-slate-500 hover:text-ink">Exit workspace</Link>
+          <Link href="/" className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ink font-bold text-white">N</span>
+            <span className="font-semibold tracking-tight text-ink">NOVA</span>
+          </Link>
+          <div className="flex items-center gap-4">
+            {/* Active Agent Badge */}
+            <div className={`flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold ${badgeStyle.border} ${badgeStyle.bg} ${badgeStyle.text}`}>
+              <span>{badgeStyle.icon}</span>
+              <span>{activeAgent.displayName}</span>
+            </div>
+            <Link href="/" className="text-sm font-semibold text-slate-500 hover:text-ink">Exit workspace</Link>
+          </div>
         </header>
 
-        <section className="mt-20 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+        <section className="mt-14 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">Realtime transport</p>
-            <h1 className="mt-5 text-5xl font-semibold tracking-tight text-ink sm:text-6xl">Voice Workspace</h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-slate-500">Connect your microphone to a private LiveKit room. Part 2 keeps the pipeline intentionally simple: the worker echoes captured audio and confirms each turn with a data message.</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">Multi-Agent Voice Pipeline</p>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-ink sm:text-5xl">Voice Workspace</h1>
+            <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
+              Speak naturally into your microphone. NOVA routes your requests to specialized agents (Main Assistant, Research, Coding, and Productivity) with live speech recognition, real-time reasoning, and synthesized voice responses.
+            </p>
           </div>
+
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-panel">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-slate-500">Room connection</span>
-              <span className="flex items-center gap-2 text-sm font-semibold text-ink"><span className={`h-2.5 w-2.5 rounded-full ${statusColor}`} />{statusLabel}</span>
+              <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <span className={`h-2.5 w-2.5 rounded-full ${statusColor}`} />
+                {statusLabel}
+              </span>
             </div>
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <ActivityIndicator active={isUserSpeaking} label="You" />
-              <ActivityIndicator active={isAgentSpeaking} label="NOVA" />
+
+            {/* Lifecycle Status & Active Agent */}
+            <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 p-3 border border-slate-100">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Agent Status</span>
+              <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <span className={`h-2.5 w-2.5 rounded-full ${lifecycleColor}`} />
+                {lifecycleLabel}
+              </span>
             </div>
-            <button onClick={() => void toggleConnection()} className="mt-6 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-ink hover:border-slate-300">
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <ActivityIndicator active={isUserSpeaking} label="You" stateText={isUserSpeaking ? "Speaking" : "Quiet"} />
+              <ActivityIndicator
+                active={isAgentSpeaking || agentState === "speaking"}
+                label={activeAgent.displayName}
+                stateText={agentState === "thinking" ? "Thinking" : agentState === "speaking" ? "Speaking" : "Ready"}
+              />
+            </div>
+
+            <button
+              onClick={() => void toggleConnection()}
+              className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-ink hover:border-slate-300"
+            >
               {status === "connected" || status === "connecting" ? "Disconnect" : "Reconnect"}
             </button>
           </div>
         </section>
 
-        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-8 shadow-panel sm:p-10">
+        {/* Live Interaction & Transcript Section */}
+        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-panel sm:p-8">
           <div className="flex flex-col items-center text-center">
-            <div className={`flex h-36 w-36 items-center justify-center rounded-full transition ${isMicEnabled ? "bg-indigo-100" : "bg-slate-100"}`}>
-              <span className={`text-5xl ${isMicEnabled ? "text-accent" : "text-slate-400"}`}>{isMicEnabled ? "◉" : "○"}</span>
+            <div
+              className={`flex h-32 w-32 items-center justify-center rounded-full transition-all duration-300 ${
+                agentState === "speaking"
+                  ? "bg-indigo-100 ring-8 ring-indigo-50"
+                  : agentState === "thinking"
+                  ? "bg-amber-100 ring-8 ring-amber-50"
+                  : isMicEnabled
+                  ? "bg-indigo-50 ring-4 ring-indigo-50"
+                  : "bg-slate-100"
+              }`}
+            >
+              <span className={`text-4xl ${isMicEnabled ? "text-accent" : "text-slate-400"}`}>
+                {agentState === "thinking" ? "⏳" : agentState === "speaking" ? "🔊" : isMicEnabled ? "🎙️" : "🔇"}
+              </span>
             </div>
-            <button onClick={() => void toggleMicrophone()} disabled={status !== "connected"} className="mt-7 rounded-xl bg-ink px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
-              {isMicEnabled ? "Mute microphone" : "Unmute microphone"}
-            </button>
-            {!canPlayAudio && status === "connected" && <button onClick={() => void enableAudio()} className="mt-4 text-sm font-semibold text-accent hover:text-indigo-700">Click to enable NOVA audio</button>}
-            {lastAcknowledgement && <p className="mt-5 rounded-full bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700">NOVA: {lastAcknowledgement}</p>}
-            {error && <p className="mt-5 max-w-xl rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                onClick={() => void toggleMicrophone()}
+                disabled={status !== "connected"}
+                className="rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isMicEnabled ? "Mute microphone" : "Unmute microphone"}
+              </button>
+              {!canPlayAudio && status === "connected" && (
+                <button onClick={() => void enableAudio()} className="text-sm font-semibold text-accent hover:text-indigo-700">
+                  Click to enable audio
+                </button>
+              )}
+            </div>
+
+            {error && (
+              <p className="mt-4 max-w-xl rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-700 border border-red-200">
+                {error}
+              </p>
+            )}
+          </div>
+
+          {/* Live Transcripts */}
+          <div className="mt-8 grid gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
+            {/* User Transcript Card */}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Your Speech</span>
+                <span className="text-xs text-slate-400">Microphone</span>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-slate-700">
+                {userTranscript || <span className="italic text-slate-400">Say something to NOVA...</span>}
+              </p>
+            </div>
+
+            {/* Agent Transcript Card */}
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">
+                  <span>{badgeStyle.icon}</span>
+                  <span>{activeAgent.displayName}</span>
+                </span>
+                <span className="text-xs font-medium text-indigo-400">
+                  {agentState === "thinking" ? "Thinking..." : agentState === "speaking" ? "Speaking" : "Response"}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-slate-800">
+                {agentTranscript || lastAcknowledgement || (
+                  <span className="italic text-slate-400">Waiting for response...</span>
+                )}
+              </p>
+            </div>
           </div>
           <div ref={audioContainerRef} className="sr-only" aria-live="polite" />
         </section>
@@ -290,11 +492,15 @@ export function VoiceWorkspace() {
   );
 }
 
-function ActivityIndicator({ active, label }: { active: boolean; label: string }) {
+function ActivityIndicator({ active, label, stateText }: { active: boolean; label: string; stateText: string }) {
   return (
-    <div className={`rounded-2xl border px-4 py-4 text-center transition ${active ? "border-accent bg-indigo-50" : "border-slate-100 bg-slate-50"}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className={`mt-2 text-sm font-semibold ${active ? "text-accent" : "text-slate-500"}`}>{active ? "Speaking" : "Quiet"}</p>
+    <div
+      className={`rounded-2xl border px-3 py-3 text-center transition ${
+        active ? "border-accent bg-indigo-50" : "border-slate-100 bg-slate-50"
+      }`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 truncate">{label}</p>
+      <p className={`mt-1 text-sm font-semibold ${active ? "text-accent" : "text-slate-500"}`}>{stateText}</p>
     </div>
   );
 }
