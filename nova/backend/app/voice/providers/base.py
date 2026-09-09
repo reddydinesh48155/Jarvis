@@ -73,3 +73,4 @@ class TTSProvider(ABC):
     @abstractmethod
     async def synthesize(self, text: str) -> AsyncIterator[bytes]:
         """Synthesize text into a stream of raw 16-bit mono PCM audio chunks."""
+

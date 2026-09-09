@@ -76,3 +76,4 @@ class MockTTS(TTSProvider):
         for _ in range(self.chunk_count):
             await asyncio.sleep(0.001)
             yield sample_chunk
+

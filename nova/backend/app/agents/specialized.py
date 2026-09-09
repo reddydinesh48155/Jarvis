@@ -73,3 +73,4 @@ class ProductivityAgent(BaseAgent):
         "Keep your advice action-oriented, crisp, and motivating. Focus on clear next steps "
         "and practical prioritization (e.g. Eisenhower matrix, time blocking)."
     )
+

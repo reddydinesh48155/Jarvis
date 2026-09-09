@@ -114,3 +114,4 @@ async def test_router_with_new_custom_agent():
     agent, reason = await router.route("Solve the quadratic equation x^2 - 4 = 0")
     assert agent.name == "math_specialist"
     assert agent.display_name == "Math Specialist"
+

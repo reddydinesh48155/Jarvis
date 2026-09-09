@@ -55,3 +55,4 @@ def create_default_registry() -> AgentRegistry:
     registry.register(CodingAgent())
     registry.register(ProductivityAgent())
     return registry
+

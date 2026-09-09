@@ -97,3 +97,4 @@ class FasterWhisperSTT(STTProvider):
             except Exception as exc:
                 logger.exception("transcription failed")
                 raise ProviderError(f"STT transcription error: {exc}") from exc
+

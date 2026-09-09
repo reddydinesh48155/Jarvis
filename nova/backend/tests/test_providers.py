@@ -77,3 +77,4 @@ def test_ollama_message_formatting():
         {"role": "system", "content": "System instruction"},
         {"role": "user", "content": "User question"},
     ]
+

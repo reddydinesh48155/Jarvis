@@ -39,3 +39,24 @@ class RefreshToken(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
+
+
+class AuditLog(Base):
+    """Audit log entry tracking tool execution attempts and outcomes."""
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    tool_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    permission_level: Mapped[str] = mapped_column(String(20), nullable=False)
+    input_params: Mapped[str] = mapped_column(String, nullable=False)
+    output_result: Mapped[str | None] = mapped_column(String, nullable=True)
+    success: Mapped[bool] = mapped_column(nullable=False)
+    error_message: Mapped[str | None] = mapped_column(String, nullable=True)
+    requires_confirmation: Mapped[bool] = mapped_column(default=False, nullable=False)
+    confirmed: Mapped[bool] = mapped_column(default=False, nullable=False)
+    execution_time_ms: Mapped[float | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

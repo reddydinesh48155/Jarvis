@@ -10,6 +10,7 @@ from typing import Any
 from app.agents.base import AgentContext, BaseAgent
 from app.agents.registry import create_default_registry
 from app.agents.router import AgentRouter
+from app.tools.registry import ToolRegistry, create_default_tool_registry
 from app.voice.providers.base import (
     ChatMessage,
     LLMProvider,
@@ -30,6 +31,7 @@ class VoicePipeline:
         llm: LLMProvider,
         tts: TTSProvider,
         router: AgentRouter | None = None,
+        tool_registry: ToolRegistry | None = None,
         on_event: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
         on_audio_chunk: Callable[[bytes], Awaitable[None]] | None = None,
     ) -> None:
@@ -37,10 +39,14 @@ class VoicePipeline:
         self.llm = llm
         self.tts = tts
         self.router = router or AgentRouter(registry=create_default_registry(), llm=llm)
+        self.tool_registry = tool_registry or create_default_tool_registry()
         self.on_event = on_event
         self.on_audio_chunk = on_audio_chunk
 
-        self.context = AgentContext()
+        self.context = AgentContext(
+            tool_registry=self.tool_registry,
+            on_tool_event=self._emit,
+        )
         self.active_agent: BaseAgent = self.router.registry.get_default()
         self._current_turn_task: asyncio.Task[None] | None = None
         self._is_interrupted = False

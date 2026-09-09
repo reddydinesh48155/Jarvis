@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     piper_binary_path: str = "piper"
     voice_sample_rate: int = 48000
 
+    # Tool & MCP Settings (Part 5)
+    allowed_tools_dir: str = "storage"
+    reports_dir: str = "storage/reports"
+    tool_default_timeout_seconds: float = 10.0
+
     @property
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.frontend_origin.split(",") if origin.strip()]

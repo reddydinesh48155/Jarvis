@@ -93,3 +93,4 @@ class PiperTTS(TTSProvider):
         except Exception as exc:
             logger.exception("unexpected error during Piper TTS streaming")
             raise ProviderError(f"TTS streaming error: {exc}") from exc
+

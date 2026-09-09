@@ -112,3 +112,4 @@ class OllamaLLM(LLMProvider):
         except Exception as exc:
             logger.exception("unexpected error streaming from Ollama")
             raise ProviderError(f"Ollama streaming error: {exc}") from exc
+

@@ -65,3 +65,4 @@ async def test_agent_includes_history_and_streams():
     assert llm.recorded_messages[0][0].role == "system"
     assert llm.recorded_messages[0][1].content == "How do I run async tasks?"
     assert llm.recorded_messages[0][3].content == "Give an example"
+

@@ -46,6 +46,16 @@ const AGENT_BADGE_STYLES: Record<string, { bg: string; text: string; border: str
   },
 };
 
+interface ToolCallInfo {
+  toolName: string;
+  status: "running" | "completed" | "confirmation_required" | "failed";
+  arguments?: Record<string, unknown>;
+  success?: boolean;
+  requiresConfirmation?: boolean;
+  resultSummary?: string;
+  error?: string;
+}
+
 export function VoiceWorkspace() {
   const { user, accessToken, isLoading: isAuthLoading } = useAuth();
   const [status, setStatus] = useState<VoiceStatus>("disconnected");
@@ -56,6 +66,7 @@ export function VoiceWorkspace() {
   });
   const [userTranscript, setUserTranscript] = useState<string | null>(null);
   const [agentTranscript, setAgentTranscript] = useState<string | null>(null);
+  const [activeToolCall, setActiveToolCall] = useState<ToolCallInfo | null>(null);
 
   const [isMicEnabled, setIsMicEnabled] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
@@ -204,6 +215,43 @@ export function VoiceWorkspace() {
                 displayName: data.agent_display_name,
               });
             }
+          } else if (data.type === "tool_call") {
+            let summary = "";
+            if (data.status === "running") {
+              if (data.tool_name === "web_search") summary = `🔎 Searching web for "${data.arguments?.query || ''}"...`;
+              else if (data.tool_name === "file_search") summary = `📁 Searching files matching "${data.arguments?.pattern || ''}"...`;
+              else if (data.tool_name === "document_reader") summary = `📄 Reading document "${data.arguments?.path || ''}"...`;
+              else if (data.tool_name === "create_report") summary = `📝 Creating report "${data.arguments?.title || ''}"...`;
+              else summary = `⚙️ Executing tool "${data.tool_name}"...`;
+            } else if (data.status === "completed") {
+              if (data.tool_name === "web_search") {
+                const count = Array.isArray(data.data?.results) ? data.data.results.length : 0;
+                summary = `✓ ${count} sources found`;
+              } else if (data.tool_name === "file_search") {
+                const count = Array.isArray(data.data?.matches) ? data.data.matches.length : 0;
+                summary = `✓ ${count} files found`;
+              } else if (data.tool_name === "document_reader") {
+                summary = `✓ Document read successfully (${data.data?.characters || 0} characters)`;
+              } else if (data.tool_name === "create_report") {
+                summary = `✓ Report saved to ${data.data?.file_path || 'reports'}`;
+              } else {
+                summary = `✓ Tool executed successfully`;
+              }
+            } else if (data.status === "confirmation_required") {
+              summary = `⚠️ Explicit confirmation required before executing this action`;
+            } else if (data.status === "failed") {
+              summary = `❌ Execution failed: ${data.error || "Unknown error"}`;
+            }
+
+            setActiveToolCall({
+              toolName: data.tool_name,
+              status: data.status,
+              arguments: data.arguments,
+              success: data.success,
+              requiresConfirmation: data.requires_confirmation,
+              resultSummary: summary,
+              error: data.error,
+            });
           } else if (data.type === "error") {
             setError(data.message || "An error occurred during voice processing.");
           }
@@ -451,6 +499,50 @@ export function VoiceWorkspace() {
               <p className="mt-4 max-w-xl rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-700 border border-red-200">
                 {error}
               </p>
+            )}
+
+            {/* Tool Execution Status Card */}
+            {activeToolCall && (
+              <div
+                className={`mt-6 w-full max-w-xl rounded-2xl border p-4 text-left transition-all duration-300 ${
+                  activeToolCall.status === "running"
+                    ? "border-amber-200 bg-amber-50/70 text-amber-900"
+                    : activeToolCall.status === "confirmation_required"
+                    ? "border-orange-200 bg-orange-50/70 text-orange-900"
+                    : activeToolCall.status === "completed"
+                    ? "border-emerald-200 bg-emerald-50/70 text-emerald-900"
+                    : "border-red-200 bg-red-50/70 text-red-900"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">
+                      {activeToolCall.status === "running"
+                        ? "⚙️"
+                        : activeToolCall.status === "confirmation_required"
+                        ? "⚠️"
+                        : activeToolCall.status === "completed"
+                        ? "✓"
+                        : "❌"}
+                    </span>
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                      Tool: {activeToolCall.toolName}
+                    </span>
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wider">
+                    {activeToolCall.status === "running"
+                      ? "Executing..."
+                      : activeToolCall.status === "confirmation_required"
+                      ? "Confirmation Required"
+                      : activeToolCall.status === "completed"
+                      ? "Success"
+                      : "Failed"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm font-medium">
+                  {activeToolCall.resultSummary || "Tool action in progress..."}
+                </p>
+              </div>
             )}
           </div>
 
