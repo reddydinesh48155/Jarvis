@@ -8,6 +8,7 @@ from typing import Tuple
 
 from app.agents.base import AgentContext, BaseAgent
 from app.agents.registry import AgentRegistry, create_default_registry
+from app.rag.agent import RAGAgent
 from app.voice.providers.base import ChatMessage, LLMProvider
 
 logger = logging.getLogger("nova.agents.router")
@@ -22,6 +23,10 @@ class AgentRouter:
         llm: LLMProvider | None = None,
     ) -> None:
         self.registry = registry or create_default_registry()
+        # Keep the Part 4 registry factory stable for existing callers while
+        # making the Knowledge Agent available to every router instance.
+        if "rag" not in self.registry:
+            self.registry.register(RAGAgent())
         self.llm = llm
 
     def _build_classification_prompt(self) -> str:
@@ -110,4 +115,3 @@ class AgentRouter:
                 default_agent.name,
             )
             return default_agent, f"classification error: {exc}"
-

@@ -45,6 +45,17 @@ class Settings(BaseSettings):
     reports_dir: str = "storage/reports"
     tool_default_timeout_seconds: float = 10.0
 
+    # Enterprise RAG settings (Part 6). 768 matches Ollama's nomic-embed-text.
+    rag_embedding_provider: str = "ollama"
+    rag_embedding_model: str = "nomic-embed-text"
+    rag_embedding_dimension: int = Field(default=768, ge=16, le=4096)
+    rag_embedding_timeout_seconds: float = Field(default=30.0, ge=1.0, le=300.0)
+    rag_chunk_size: int = Field(default=900, ge=200, le=4000)
+    rag_chunk_overlap: int = Field(default=120, ge=0, le=1000)
+    rag_max_file_size_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=100 * 1024 * 1024)
+    rag_min_relevance: float = Field(default=0.20, ge=0.0, le=1.0)
+    rag_candidate_limit: int = Field(default=200, ge=10, le=2000)
+
     @property
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.frontend_origin.split(",") if origin.strip()]

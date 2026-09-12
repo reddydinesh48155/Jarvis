@@ -100,6 +100,7 @@ def test_default_registry_contains_all_builtin_tools():
         "file_search",
         "document_reader",
         "create_report",
+        "RAG_search",
     }
     assert all(schema["type"] == "function" for schema in registry.get_schemas())
 

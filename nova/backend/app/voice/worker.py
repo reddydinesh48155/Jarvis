@@ -14,6 +14,7 @@ import math
 import shutil
 from collections import deque
 from typing import Any
+from uuid import UUID
 
 from livekit import rtc
 from livekit.agents import AgentServer, AutoSubscribe, JobContext, cli
@@ -137,6 +138,16 @@ def create_default_providers() -> tuple[STTProvider, LLMProvider, TTSProvider]:
 server = AgentServer()
 
 
+def _livekit_identity_to_user_id(identity: str) -> str | None:
+    """Derive the authenticated UUID embedded in NOVA's private room identity."""
+    raw_identity = identity.removeprefix("nova-user-")
+    try:
+        return str(UUID(raw_identity))
+    except ValueError:
+        logger.warning("LiveKit identity is not a NOVA user identity: %s", identity)
+        return None
+
+
 @server.rtc_session(agent_name=settings.livekit_agent_name)
 async def entrypoint(ctx: JobContext) -> None:
     logger.info("connecting NOVA voice worker to room %s", ctx.room.name)
@@ -217,6 +228,7 @@ async def entrypoint(ctx: JobContext) -> None:
         router=router,
         on_event=publish_event,
         on_audio_chunk=play_audio_chunk,
+        user_id=_livekit_identity_to_user_id(participant.identity),
     )
 
     detector = SilenceDetector()

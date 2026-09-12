@@ -32,6 +32,7 @@ class VoicePipeline:
         tts: TTSProvider,
         router: AgentRouter | None = None,
         tool_registry: ToolRegistry | None = None,
+        user_id: str | None = None,
         on_event: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
         on_audio_chunk: Callable[[bytes], Awaitable[None]] | None = None,
     ) -> None:
@@ -44,6 +45,7 @@ class VoicePipeline:
         self.on_audio_chunk = on_audio_chunk
 
         self.context = AgentContext(
+            user_id=user_id,
             tool_registry=self.tool_registry,
             on_tool_event=self._emit,
         )

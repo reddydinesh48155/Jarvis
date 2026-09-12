@@ -44,6 +44,12 @@ const AGENT_BADGE_STYLES: Record<string, { bg: string; text: string; border: str
     border: "border-amber-200",
     icon: "⚡",
   },
+  rag: {
+    bg: "bg-cyan-50",
+    text: "text-cyan-700",
+    border: "border-cyan-200",
+    icon: "K",
+  },
 };
 
 interface ToolCallInfo {
@@ -222,6 +228,7 @@ export function VoiceWorkspace() {
               else if (data.tool_name === "file_search") summary = `📁 Searching files matching "${data.arguments?.pattern || ''}"...`;
               else if (data.tool_name === "document_reader") summary = `📄 Reading document "${data.arguments?.path || ''}"...`;
               else if (data.tool_name === "create_report") summary = `📝 Creating report "${data.arguments?.title || ''}"...`;
+              else if (data.tool_name === "RAG_search" || data.tool_name === "rag_search") summary = "🔎 Searching knowledge...";
               else summary = `⚙️ Executing tool "${data.tool_name}"...`;
             } else if (data.status === "completed") {
               if (data.tool_name === "web_search") {
@@ -234,6 +241,9 @@ export function VoiceWorkspace() {
                 summary = `✓ Document read successfully (${data.data?.characters || 0} characters)`;
               } else if (data.tool_name === "create_report") {
                 summary = `✓ Report saved to ${data.data?.file_path || 'reports'}`;
+              } else if (data.tool_name === "RAG_search" || data.tool_name === "rag_search") {
+                const count = Number(data.data?.source_count ?? (Array.isArray(data.data?.sources) ? data.data.sources.length : 0));
+                summary = `✓ ${count} sources found`;
               } else {
                 summary = `✓ Tool executed successfully`;
               }
@@ -412,6 +422,7 @@ export function VoiceWorkspace() {
               <span>{badgeStyle.icon}</span>
               <span>{activeAgent.displayName}</span>
             </div>
+            <Link href="/knowledge" className="text-sm font-semibold text-slate-500 hover:text-ink">Knowledge</Link>
             <Link href="/" className="text-sm font-semibold text-slate-500 hover:text-ink">Exit workspace</Link>
           </div>
         </header>

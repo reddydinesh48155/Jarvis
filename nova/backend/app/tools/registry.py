@@ -9,6 +9,7 @@ from app.tools.base import BaseTool, PermissionLevel
 from app.tools.builtin.create_report import CreateReportTool
 from app.tools.builtin.document_reader import DocumentReaderTool
 from app.tools.builtin.file_search import FileSearchTool
+from app.tools.builtin.rag_search import RAGSearchTool
 from app.tools.builtin.web_search import WebSearchTool
 
 logger = logging.getLogger("nova.tools.registry")
@@ -72,6 +73,7 @@ def create_default_tool_registry() -> ToolRegistry:
     registry.register(FileSearchTool())
     registry.register(DocumentReaderTool())
     registry.register(CreateReportTool())
+    registry.register(RAGSearchTool())
     return registry
 
 

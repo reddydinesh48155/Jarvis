@@ -1,5 +1,6 @@
 import type { TokenResponse, User } from "@/types/auth";
 import type { VoiceTokenResponse } from "@/types/voice";
+import type { DocumentListResponse, KnowledgeDocument } from "@/types/rag";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -15,7 +16,7 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("Content-Type")) {
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -69,6 +70,29 @@ export function getMe(accessToken: string): Promise<User> {
 export function getVoiceToken(accessToken: string): Promise<VoiceTokenResponse> {
   return request<VoiceTokenResponse>("/voice/token", {
     method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function listDocuments(accessToken: string): Promise<DocumentListResponse> {
+  return request<DocumentListResponse>("/documents", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function uploadDocument(accessToken: string, file: File): Promise<KnowledgeDocument> {
+  const body = new FormData();
+  body.append("file", file);
+  return request<KnowledgeDocument>("/documents", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body,
+  });
+}
+
+export function deleteDocument(accessToken: string, documentId: string): Promise<void> {
+  return request<void>(`/documents/${documentId}`, {
+    method: "DELETE",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
