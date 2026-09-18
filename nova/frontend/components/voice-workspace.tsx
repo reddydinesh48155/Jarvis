@@ -73,6 +73,20 @@ export function VoiceWorkspace() {
   const [userTranscript, setUserTranscript] = useState<string | null>(null);
   const [agentTranscript, setAgentTranscript] = useState<string | null>(null);
   const [activeToolCall, setActiveToolCall] = useState<ToolCallInfo | null>(null);
+  const [memoryNotification, setMemoryNotification] = useState<{
+    type: string;
+    content?: string;
+    count?: number;
+  } | null>(null);
+  const [toolConfirmation, setToolConfirmation] = useState<{
+    toolName: string;
+    prompt: string;
+    arguments?: Record<string, unknown>;
+  } | null>(null);
+  const [confirmationResult, setConfirmationResult] = useState<{
+    toolName: string;
+    outcome: "confirmed" | "declined" | "timed_out";
+  } | null>(null);
 
   const [isMicEnabled, setIsMicEnabled] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
@@ -85,6 +99,7 @@ export function VoiceWorkspace() {
   const connectRoomRef = useRef<() => Promise<void>>(async () => undefined);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const acknowledgementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const memoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptRef = useRef(0);
   const isConnectingRef = useRef(false);
   const intentionalDisconnectRef = useRef(false);
@@ -262,6 +277,43 @@ export function VoiceWorkspace() {
               resultSummary: summary,
               error: data.error,
             });
+          } else if (data.type === "memory_proposal") {
+            if (memoryTimerRef.current !== null) {
+              clearTimeout(memoryTimerRef.current);
+              memoryTimerRef.current = null;
+            }
+            setMemoryNotification({ type: "proposal", content: data.content });
+          } else if (data.type === "memory_saved") {
+            if (memoryTimerRef.current !== null) {
+              clearTimeout(memoryTimerRef.current);
+            }
+            setMemoryNotification({ type: "saved", content: data.content });
+            memoryTimerRef.current = setTimeout(() => {
+              setMemoryNotification(null);
+              memoryTimerRef.current = null;
+            }, 3000);
+          } else if (data.type === "memory_recalled") {
+            if (memoryTimerRef.current !== null) {
+              clearTimeout(memoryTimerRef.current);
+            }
+            setMemoryNotification({ type: "recalled", count: data.count });
+            memoryTimerRef.current = setTimeout(() => {
+              setMemoryNotification(null);
+              memoryTimerRef.current = null;
+            }, 3000);
+          } else if (data.type === "tool_confirmation_request") {
+            setToolConfirmation({
+              toolName: data.tool_name,
+              prompt: data.prompt || `Action '${data.tool_name}' requires your approval.`,
+              arguments: data.arguments,
+            });
+          } else if (data.type === "tool_confirmation_result") {
+            setToolConfirmation(null);
+            setConfirmationResult({
+              toolName: data.tool_name,
+              outcome: data.outcome,
+            });
+            setTimeout(() => setConfirmationResult(null), 4000);
           } else if (data.type === "error") {
             setError(data.message || "An error occurred during voice processing.");
           }
@@ -320,6 +372,9 @@ export function VoiceWorkspace() {
       clearReconnectTimer();
       if (acknowledgementTimerRef.current !== null) {
         clearTimeout(acknowledgementTimerRef.current);
+      }
+      if (memoryTimerRef.current !== null) {
+        clearTimeout(memoryTimerRef.current);
       }
       const room = roomRef.current;
       roomRef.current = null;
@@ -423,6 +478,7 @@ export function VoiceWorkspace() {
               <span>{activeAgent.displayName}</span>
             </div>
             <Link href="/knowledge" className="text-sm font-semibold text-slate-500 hover:text-ink">Knowledge</Link>
+            <Link href="/memory" className="text-sm font-semibold text-slate-500 hover:text-ink">Memory</Link>
             <Link href="/" className="text-sm font-semibold text-slate-500 hover:text-ink">Exit workspace</Link>
           </div>
         </header>
@@ -553,6 +609,88 @@ export function VoiceWorkspace() {
                 <p className="mt-2 text-sm font-medium">
                   {activeToolCall.resultSummary || "Tool action in progress..."}
                 </p>
+              </div>
+            )}
+
+            {/* Memory Notification Card */}
+            {memoryNotification && (
+              <div
+                className={`mt-4 w-full max-w-xl rounded-2xl border p-4 text-left transition-all duration-300 ${
+                  memoryNotification.type === "proposal"
+                    ? "border-amber-200 bg-amber-50 text-amber-900"
+                    : memoryNotification.type === "saved"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    : "border-blue-200 bg-blue-50 text-blue-900"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">
+                    {memoryNotification.type === "proposal"
+                      ? "💾"
+                      : memoryNotification.type === "saved"
+                      ? "✓"
+                      : "🧠"}
+                  </span>
+                  <span className="text-sm font-medium">
+                    {memoryNotification.type === "proposal" &&
+                      `Should I remember: '${memoryNotification.content}'?`}
+                    {memoryNotification.type === "saved" &&
+                      `Memory saved: '${memoryNotification.content}'`}
+                    {memoryNotification.type === "recalled" &&
+                      `Recalled ${memoryNotification.count} memories`}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Tool Confirmation Dialog (HITL — Part 8) */}
+            {toolConfirmation && (
+              <div className="mt-4 w-full max-w-xl rounded-2xl border-2 border-amber-400 bg-amber-50 p-5 text-left shadow-lg transition-all duration-300">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 text-2xl">⚠️</span>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-bold text-amber-900">Action Requires Approval</h4>
+                    <p className="mt-1 text-sm text-amber-800">
+                      <span className="font-mono font-semibold">{toolConfirmation.toolName}</span>
+                      {" wants to execute."}
+                    </p>
+                    <p className="mt-2 text-xs text-amber-700">{toolConfirmation.prompt}</p>
+                    <p className="mt-3 text-xs text-amber-600 italic">
+                      Say &quot;yes&quot; or &quot;no&quot; to respond by voice, or use the buttons below.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tool Confirmation Result Notification */}
+            {confirmationResult && (
+              <div
+                className={`mt-4 w-full max-w-xl rounded-2xl border p-4 text-left transition-all duration-300 ${
+                  confirmationResult.outcome === "confirmed"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    : confirmationResult.outcome === "declined"
+                    ? "border-red-200 bg-red-50 text-red-900"
+                    : "border-slate-200 bg-slate-50 text-slate-700"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-base">
+                    {confirmationResult.outcome === "confirmed"
+                      ? "✅"
+                      : confirmationResult.outcome === "declined"
+                      ? "🚫"
+                      : "⏰"}
+                  </span>
+                  <span className="text-sm font-medium">
+                    {confirmationResult.outcome === "confirmed" &&
+                      `Action '${confirmationResult.toolName}' approved and executing.`}
+                    {confirmationResult.outcome === "declined" &&
+                      `Action '${confirmationResult.toolName}' was denied.`}
+                    {confirmationResult.outcome === "timed_out" &&
+                      `Action '${confirmationResult.toolName}' timed out and was auto-declined.`}
+                  </span>
+                </div>
               </div>
             )}
           </div>

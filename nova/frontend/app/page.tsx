@@ -37,11 +37,58 @@ export default function HomePage() {
         <section className="mt-24 max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">Authenticated</p>
           <h1 className="mt-5 text-5xl font-semibold tracking-tight text-ink">Hello, {user.email}.</h1>
-          <p className="mt-6 text-lg leading-8 text-slate-500">Your NOVA identity is ready. This foundation keeps the access token in session state and the refresh token in a secure HTTP-only cookie.</p>
-           <div className="mt-8 flex flex-wrap gap-3">
-             <Link href="/voice" className="inline-flex rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Open Voice Workspace</Link>
-             <Link href="/knowledge" className="inline-flex rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-ink hover:border-slate-300">Manage Knowledge</Link>
-           </div>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/voice" className="inline-flex rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">Open Voice Workspace</Link>
+            <Link href="/knowledge" className="inline-flex rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-ink hover:border-slate-300">Manage Knowledge</Link>
+            <Link href="/memory" className="inline-flex rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-ink hover:border-slate-300">Manage Memory</Link>
+            <Link href="/security" className="inline-flex rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-ink hover:border-slate-300">Security &amp; Audit</Link>
+          </div>
+        </section>
+
+        <section className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Link
+            href="/voice"
+            className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-panel transition hover:border-slate-300 hover:shadow-md"
+          >
+            <span className="text-3xl">🎙️</span>
+            <h2 className="mt-4 text-lg font-semibold text-ink group-hover:text-accent">Voice Workspace</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+              Real-time conversational AI with voice interaction, specialized agent routing, and tool execution.
+            </p>
+          </Link>
+
+          <Link
+            href="/knowledge"
+            className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-panel transition hover:border-slate-300 hover:shadow-md"
+          >
+            <span className="text-3xl">📚</span>
+            <h2 className="mt-4 text-lg font-semibold text-ink group-hover:text-accent">Knowledge Base</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+              Upload and manage personal documents for grounded RAG answers with source citations.
+            </p>
+          </Link>
+
+          <Link
+            href="/memory"
+            className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-panel transition hover:border-slate-300 hover:shadow-md"
+          >
+            <span className="text-3xl">🧠</span>
+            <h2 className="mt-4 text-lg font-semibold text-ink group-hover:text-accent">Memory Manager</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+              View, manage, and control what NOVA remembers about you
+            </p>
+          </Link>
+
+          <Link
+            href="/security"
+            className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-panel transition hover:border-slate-300 hover:shadow-md"
+          >
+            <span className="text-3xl">🔒</span>
+            <h2 className="mt-4 text-lg font-semibold text-ink group-hover:text-accent">Security &amp; Audit</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+              View audit logs, tool executions, and security events (admin only).
+            </p>
+          </Link>
         </section>
       </div>
     </main>

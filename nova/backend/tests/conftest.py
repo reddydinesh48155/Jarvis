@@ -5,6 +5,8 @@ os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://nova:nova@localhost:
 os.environ.setdefault("LIVEKIT_URL", "wss://test.livekit.cloud")
 os.environ.setdefault("LIVEKIT_API_KEY", "test-livekit-api-key")
 os.environ.setdefault("LIVEKIT_API_SECRET", "test-livekit-api-secret")
+os.environ.setdefault("RATE_LIMIT_AUTH_PER_MINUTE", "100")
+os.environ.setdefault("RATE_LIMIT_API_PER_MINUTE", "600")
 
 from collections.abc import AsyncGenerator, Generator
 

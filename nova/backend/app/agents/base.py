@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+
+from app.middleware.sanitization import sanitize_tool_output
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
@@ -30,6 +32,7 @@ class AgentContext:
     tool_registry: ToolRegistry | None = None
     on_tool_event: Callable[[dict[str, Any]], Awaitable[None]] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    memory_context: str | None = None
 
 
 @dataclass
@@ -56,6 +59,14 @@ class BaseAgent(ABC):
     ) -> list[ChatMessage]:
         """Build the list of ChatMessage items including system prompt and recent history."""
         messages = [ChatMessage(role="system", content=self.system_prompt)]
+        if context.memory_context:
+            messages.append(ChatMessage(
+                role="system",
+                content=(
+                    "Recalled memories about this user (use naturally, don't repeat verbatim):\n"
+                    + context.memory_context
+                ),
+            ))
         messages.extend(context.conversation_history)
         messages.append(ChatMessage(role="user", content=user_input))
         return messages

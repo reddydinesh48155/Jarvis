@@ -56,6 +56,17 @@ class Settings(BaseSettings):
     rag_min_relevance: float = Field(default=0.20, ge=0.0, le=1.0)
     rag_candidate_limit: int = Field(default=200, ge=10, le=2000)
 
+    # Memory System (Part 7)
+    memory_fact_detection_enabled: bool = True
+    memory_max_long_term_per_user: int = Field(default=500, ge=10, le=5000)
+    memory_relevance_threshold: float = Field(default=0.30, ge=0.0, le=1.0)
+
+    # Security & Hardening (Part 8)
+    rate_limit_auth_per_minute: int = Field(default=10, ge=1, le=100)
+    rate_limit_api_per_minute: int = Field(default=60, ge=1, le=600)
+    tool_confirmation_timeout_seconds: int = Field(default=30, ge=5, le=120)
+    admin_emails: str = ""  # comma-separated list of emails auto-promoted to admin
+
     @property
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.frontend_origin.split(",") if origin.strip()]

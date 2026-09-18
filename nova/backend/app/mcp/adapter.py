@@ -135,5 +135,7 @@ class MCPToolAdapter(BaseTool):
             if isinstance(c, dict) and c.get("type") == "text"
         ] if isinstance(contents, list) else []
         if text_parts:
-            return " ".join(text_parts).strip()
+            # Sanitize untrusted MCP output to prevent prompt injection (Part 8)
+            from app.middleware.sanitization import sanitize_tool_output
+            return sanitize_tool_output(" ".join(text_parts).strip())
         return mcp_response.get("structuredContent", mcp_response)

@@ -92,6 +92,7 @@ export default function KnowledgePage() {
           </Link>
           <nav className="flex items-center gap-4 text-sm font-semibold text-slate-500">
             <Link href="/voice" className="hover:text-ink">Voice Workspace</Link>
+            <Link href="/memory" className="hover:text-ink">Memory</Link>
             <Link href="/" className="hover:text-ink">Home</Link>
           </nav>
         </header>

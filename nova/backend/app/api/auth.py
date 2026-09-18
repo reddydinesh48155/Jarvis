@@ -5,7 +5,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import select
+from sqlalchemy import func,select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
@@ -31,6 +31,7 @@ class UserResponse(BaseModel):
 
     id: UUID
     email: EmailStr
+    role: str = "user"
     created_at: datetime
 
 
@@ -96,6 +97,18 @@ async def get_current_user(
     return user
 
 
+async def get_current_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Dependency that requires the authenticated user to be an admin."""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
+
+
 async def build_token_response(db: AsyncSession, user: User, response: Response) -> TokenResponse:
     access_token, refresh_token, expires_in = await issue_token_pair(db, user)
     await db.commit()
@@ -115,7 +128,17 @@ async def register(credentials: Credentials, response: Response, db: AsyncSessio
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
 
     hashed_password = await run_in_threadpool(hash_password, credentials.password)
-    user = User(email=email, hashed_password=hashed_password)
+
+    # Auto-promote to admin: first user ever, or email in ADMIN_EMAILS
+    admin_emails = {
+        e.strip().lower()
+        for e in settings.admin_emails.split(",")
+        if e.strip()
+    }
+    user_count = await db.scalar(select(func.count()).select_from(User))
+    role = "admin" if (user_count == 0 or email in admin_emails) else "user"
+
+    user = User(email=email, hashed_password=hashed_password, role=role)
     db.add(user)
     try:
         await db.flush()
